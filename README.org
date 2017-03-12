@@ -1,0 +1,46 @@
+** Notes on flashing the ice40 board(s) by Olimex using a raspberry pi
+
+If you have a raspberry PI around, you can use the flashrom utility
+with Linux' /dev/spidev to program a bitstream to your ICE40HX1K-EVB.
+The following table shows the wiring required for the Pi B+ or 2.  I
+used IDC connectors with a rainbow ribbon for convenient wiring (image
+below).
+
+| Raspi 2/B+ |          | ICE40-EVB |              |
+|------------+----------+-----------+--------------|
+|         17 | =3v3=    |         1 | =3v3=        |
+|         18 | =gpio24= |         6 | =creset=     |
+|         19 | =mosi=   |         8 | =sdo=        |
+|         20 | =gnd=    |         2 | =gnd=        |
+|         21 | =miso=   |         7 | =sdi=        |
+|         22 | =gpio25= |         5 | =cdone=      |
+|         23 | =clk=    |         9 | =sck=        |
+|         24 | =ce0=    |        10 | =#cd = ss_b= |
+|         25 | =gnd=    |           |              |
+|         26 | =ce1=    |           |              |
+
+enable SPI device on the Pi (needs reboot)
+: echo dtparam=spi=on >> /boot/config.txt
+
+build and install flashrom
+: git clone https://www.flashrom.org/git/flashrom.git
+: cd flashrom
+: make CONFIG_ENABLE_LIBPCI_PROGRAMMERS=no CONFIG_ENABLE_LIBUSB0_PROGRAMMERS=no CONFIG_ENABLE_LIBUSB1_PROGRAMMERS=no install
+
+claim GPIO24 for sysfs-control
+: echo 24 > /sys/class/gpio/export
+
+Pull GPIO24 low to put the ice40 into reset.  The cdone-LED on the board should turn off.
+: echo out > /sys/class/gpio/gpio24/direction
+
+Read the flash chip at 20MHz (for short cabling)
+: flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=20000 -r dump
+
+Write a bitstream
+: flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=20000 -w bitstream
+
+Deassert creset
+: echo in > /sys/class/gpio/gpio24/direction
+
+[[wiring.jpg]]
+
