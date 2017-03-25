@@ -6,18 +6,18 @@ The following table shows the wiring required for the Pi B+ or 2.  I
 used IDC connectors with a rainbow ribbon for convenient wiring (image
 below).
 
-| Raspi 2/B+ |          | ICE40-EVB |              |
-|------------+----------+-----------+--------------|
-|         17 | =3v3=    |         1 | =3v3=        |
-|         18 | =gpio24= |         6 | =creset=     |
-|         19 | =mosi=   |         8 | =sdo=        |
-|         20 | =gnd=    |         2 | =gnd=        |
-|         21 | =miso=   |         7 | =sdi=        |
-|         22 | =gpio25= |         5 | =cdone=      |
-|         23 | =clk=    |         9 | =sck=        |
-|         24 | =ce0=    |        10 | =#cd = ss_b= |
-|         25 | =gnd=    |           |              |
-|         26 | =ce1=    |           |              |
+| Raspi 2/B+ |          | ICE40-EVB |              | comment  |
+|------------+----------+-----------+--------------+----------|
+|         17 | =3v3=    |         1 | =3v3=        |          |
+|         18 | =gpio24= |         6 | =creset=     |          |
+|         19 | =mosi=   |         8 | =sdo=        |          |
+|         20 | =gnd=    |         2 | =gnd=        |          |
+|         21 | =miso=   |         7 | =sdi=        |          |
+|         22 | =gpio25= |         5 | =cdone=      | optional |
+|         23 | =clk=    |         9 | =sck=        |          |
+|         24 | =ce0=    |        10 | =#cd = ss_b= |          |
+|         25 | =gnd=    |           |              |          |
+|         26 | =ce1=    |           |              |          |
 
 enable SPI device on the Pi (needs reboot)
 : echo dtparam=spi=on >> /boot/config.txt
@@ -36,10 +36,17 @@ Pull GPIO24 low to put the ice40 into reset.  The cdone-LED on the board should 
 Read the flash chip at 20MHz (for short cabling)
 : flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=20000 -r dump
 
-Write a bitstream
-: flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=20000 -w bitstream
+Simply swap -r for -w to write the dump back
+: flashrom -p linux_spi:dev=/dev/spidev0.0,spispeed=20000 -w dump
 
-Deassert creset
+As generated bitstreams are smaller than size of the flash chip, you
+need to add padding for flashrom to accept them as image.  I used the
+follwing commands to do that:
+
+: tr '\0' '\377' < /dev/zero | dd bs=2M count=1 of=image
+: dd if=my_bitstream conv=notrunc of=image
+
+Deassert creset to let the ice40 read the configuration from the bus:
 : echo in > /sys/class/gpio/gpio24/direction
 
 [[wiring.jpg]]
